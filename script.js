@@ -7,11 +7,11 @@ let border = 10;
 let origin = [border, background.clientHeight - playerElem.clientHeight - border];
 
 // converts into correct pixel values of the locations
-const yCoord = function (y) {
-    return `${origin[1] - y}px`;
-}
 const xCoord = function (x) {
     return `${origin[0] + x}px`;
+}
+const yCoord = function (y) {
+    return `${origin[1] - y}px`;
 }
 
 const player = {
@@ -67,6 +67,39 @@ const player = {
     }
 }
 
+class Obstacle {
+  constructor(id) {
+    this.x = 10;
+    this.width = 50;
+    this.id = document.getElementById(String(id));
+  }
+  restart() {
+    let tries = 0;
+    do {
+        this.x = Math.random()*1000 + 1000;
+        tries++;
+        if (tries > 1000) {
+            console.warn("Could not find valid restart position.");
+            break; // prevent infinite loop
+        }
+    } while (obstacles.some( obstacle => this != obstacle && Math.abs(this.x - obstacle.x) < 400));
+  }
+
+  move() {
+    this.x--;
+    this.id.style.left = xCoord(this.x);
+    if (this.x < -this.width - 10) {
+        this.restart();
+    }
+  }
+}
+
+const obstacles = [];
+
+for (let i = 0; i < 3; i++) {
+    obstacles.push(new Obstacle(`${i + 1}`));
+}
+
 // player jumps when spacebar is pressed
 window.addEventListener('keydown', function (e) {
     if (e.key === " ") {
@@ -88,5 +121,6 @@ window.setInterval(function () {
     let dt = (now - lastTime) / 1000; // seconds
     lastTime = now;
     player.updateVelocityAndPosition(dt);
+    obstacles.forEach(obstacle => obstacle.move());
 }, 5);
     
