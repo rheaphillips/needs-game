@@ -1,52 +1,92 @@
 'use strict';
 
 let background = document.querySelector('.background'), playerElem = document.querySelector('.player');
-let groundThickness = 10;
+let border = 10;
+
+// the position of the origin (inital values as per the posiion of the wall and ground in the DOM)
+let origin = [border, background.clientHeight - playerElem.clientHeight - border];
+
+// converts into correct pixel values of the locations
+const yCoord = function (y) {
+    return `${origin[1] - y}px`;
+}
+const xCoord = function (x) {
+    return `${origin[0] + x}px`;
+}
 
 const player = {
     
     vel: 0, // vertical velocity
-    yInitial: background.style.height - playerElem.style.height - groundThickness, // vertical position (inital value as per the posiion of the ground in the DOM)
-    y: yInitial,
-    g: 150, // gravitational acceleration
+    y: 0,
+    g: 700, // gravitational acceleration
     count: 0, // number of spacebar clicks
+    jumping: false,
+    jumpHoldTime: 0,
+    maxJumpHold: 0.3, // Max time (in seconds) holding jump gives more height
+
     freeFall: false, // when the player is mid-air and it's velocity can no longer be increased
+
+
+    // the velocity is only increased if it's been increased less than two times since the player got off the ground, and the user hasn't let go of the spacebar (indicated by the date of this.freeFall)
+    jumpStart() {
+        if (this.count < 2) {
+            this.count++;
+            this.jumping = true;
+            this.jumpHoldTime = 0;
+            this.vel += 500; // initial jump impulse
+        }
+    },
+
+    jumpHold(dt) {
+        if (this.jumping && this.jumpHoldTime < this.maxJumpHold) {
+            this.vel += 250 * dt; // continue to increase velocity
+            this.jumpHoldTime += dt;
+        }
+    },
+
+    jumpEnd() {
+        this.jumping = false;
+    },
     
     // updates the player's velocity and position
-    updateVelocityAndPosition() {
-        this.vel = this.vel + this.g*0.01; // updates the velocity using gravity
-        this.y += this.vel*0.1; // updates position using velocity
+    updateVelocityAndPosition(dt) {
+        this.jumpHold(dt); // apply jump boost if key is held
+
+        this.vel = this.vel - this.g*0.01; // updates the velocity using gravity
+        this.y += this.vel * dt; // updates position using velocity
 
         // resets at ground level
-        if (this.y > this.yInitial) {
-            this.y = this.yInitial;
+        if (this.y <= 0) {
+            this.y = 0;
             this.vel = 0;
             this.count = 0;
-            this.freeFall = false; // this enables the player to jump again
+            this.jumping = false; // this enables the player to jump again
         } 
+
+        playerElem.style.top = yCoord(this.y);
     }
 }
 
 // player jumps when spacebar is pressed
 window.addEventListener('keydown', function (e) {
-
-    // the velocity is only increased if it's been increased less than two times since the player got off the ground, and the user hasn't let go of the spacebar
-    if (e.key == " " && player.count < 2 && !player.freeFall) {  
-        player.count++;
-        player.vel -= 30;        
+    if (e.key === " ") {
+        player.jumpStart();
     }
 });
 
-// ensures once the spacebar is released, the player can no longer jump until it lands on the ground
+// player stops jumping when spacebar is released
 window.addEventListener('keyup', function (e) {
-    if (e.key == " ") {  
-        player.freeFall = true;
+    if (e.key === " ") {
+        player.jumpEnd();
     }
 });
 
 // the velocity and postion, and the UI is updated in accordance, every 10 ms
+let lastTime = performance.now();
 window.setInterval(function () {
-    player.updateVelocityAndPosition();
-    playerElem.style.top = `${player.y}px`; 
-}, 10)
+    let now = performance.now();
+    let dt = (now - lastTime) / 1000; // seconds
+    lastTime = now;
+    player.updateVelocityAndPosition(dt);
+}, 5);
     
