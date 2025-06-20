@@ -34,6 +34,18 @@ button {
     top: 20px;
 }
 
+.scoreDisplay {
+    position: absolute;
+    left: 10px;
+    top: 20px;
+}
+
+.highscoreDisplay {
+    position: absolute;
+    left: 100px;
+    top: 20px;
+}
+
 .resume {
     position: relative;
     margin: auto;

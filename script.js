@@ -1,8 +1,8 @@
 'use strict';
 
-let background = document.querySelector('.background'), playerElem = document.querySelector('.player'), pauseBtn = document.querySelector('.pause'), resumeBtn = document.querySelector('.resume'), restartBtn = document.querySelector('.restart'), gameOverElem = document.querySelector('.gameOver'), overlay = document.querySelector(".overlay");
+let background = document.querySelector('.background'), playerElem = document.querySelector('.player'), pauseBtn = document.querySelector('.pause'), resumeBtn = document.querySelector('.resume'), restartBtn = document.querySelector('.restart'), gameOverElem = document.querySelector('.gameOver'), overlay = document.querySelector(".overlay"), scoreElem = document.querySelector(".score"), highscoreElem = document.querySelector(".highscore");
 
-let border = 10, speed = 0.75, score = 0, highscore = 0, game, lastTime, totalTime = 0;
+let border = 10, speed = 1.75, score = 0, highscore = 0, game;
 // the position of the origin (inital values as per the posiion of the wall and ground in the DOM)
 let origin = [border, background.clientHeight - playerElem.clientHeight - border];
 
@@ -16,8 +16,8 @@ const yCoord = function (y) {
 
 const player = {
     
-    g: 0.5, // gravitational acceleration
-    maxJumpHold: 0.03, // Max time (in seconds) holding jump gives more height
+    g: 0.07, // gravitational acceleration
+    maxJumpHold: 0.05, // Max time (in seconds) holding jump gives more height
     vel: 0, // vertical velocity
     y: 0,
     jumping: false,
@@ -27,13 +27,13 @@ const player = {
     jumpStart() {
         if (!this.jumping) {
             this.jumping = true;
-            this.vel += 2;
+            this.vel += 0.75;
         }
     },
 
     jumpHold() {
         if (this.jumping && this.jumpHoldTime < this.maxJumpHold) {
-            this.vel += 3; // continue to increase velocity
+            this.vel += 0.5; // continue to increase velocity
             this.jumpHoldTime += 0.005;
         }
     },
@@ -70,26 +70,28 @@ class Obstacle {
   respawn() {
     let tries = 0;
     do {
-        this.x = Math.random()*1000 + 1000;
+        this.x = Math.random()*1000 + 1500;
         tries++;
-        if (tries > 1000) {
+        if (tries > 10000) {
             console.warn("Could not find valid restart position.");
             break; // prevent infinite loop
         }
-    } while (obstacles.some( obstacle => this == obstacle || Math.abs(this.x - obstacle.x) < 300));
+    } while (obstacles.some( obstacle => this == obstacle || Math.abs(this.x - obstacle.x) < 800));
   }
 
-  move(speed, score) {
+  move(speed) {
     this.x -= speed;
     this.id.style.left = xCoord(this.x);
     if (this.x < -this.width - 10) {
         score++;
+        scoreElem.textContent = score;
         this.respawn();
     }
+    this.collision();
   }
 
   collision() {
-    if (this.x > 100 && this.x < 180 && player.y < this.height) gameOver();
+    if (this.x > 60 && this.x < 180 && player.y < this.height) gameOver();
   }
 }
 
@@ -120,11 +122,14 @@ const resume = function () {
     window.addEventListener('keydown', jump);
 
     // start game loop
-    lastTime = performance.now();
     game = window.setInterval(gameLoop, 5);
 }
 
 const restart = function () {
+    // reset displayed score and update displayed highscore
+    scoreElem.textContent = score;
+    highscoreElem.textContent = highscore;
+
     // Reset obstacles and player
     obstacles.forEach(obstacle => obstacle.respawn());
     player.reset();
@@ -133,7 +138,6 @@ const restart = function () {
 }
 
 const gameOver = function() {
-
     if (highscore < score) highscore = score;
     score = 0;
 
@@ -146,15 +150,9 @@ const gameOver = function() {
 
 // the velocity and postion, and the UI is updated in accordance, every 5 ms
 const gameLoop = function () {
-    let now = performance.now();
-    totalTime += (now - lastTime) / 1000; // seconds
-    lastTime = now;
     player.updateVelocityAndPosition();
-    if (totalTime > 2) obstacles.forEach(obstacle => {
-        obstacle.move(speed, score);
-        obstacle.collision();
-    });
-    if (score%3 == 0 && score != 0) speed += 0.25
+    obstacles.forEach(obstacle => obstacle.move(speed));
+    if (score%10 == 0 && score != 0) speed += 0.1
 }
 
 pauseBtn.addEventListener('click', pause);
