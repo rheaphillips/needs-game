@@ -23,21 +23,31 @@
     background-color: rgb(181, 113, 208);
 }
 
-.hide {
-    display: none;
-}
-
-.pause {
+button {
     position: absolute;
-    left: 900px;
-    top: 20px;
     width: 100px;
     height: 40px;
 }
 
+.pause {
+    left: 900px;
+    top: 20px;
+}
+
+.resume {
+    position: relative;
+    margin: auto;
+    top: 260px;
+}
+
+.restart {
+    position: relative;
+    margin: auto;
+    top: 260px;
+}
+
 .overlay {
   position: fixed; /* Sit on top of the page content */
-  display: none; /* Hidden by default */
   width: 100%; /* Full width (cover the whole page) */
   height: 100%; /* Full height (cover the whole page) */
   top: 0;
@@ -45,6 +55,9 @@
   right: 0;
   bottom: 0;
   background-color: rgba(0,0,0,0.5); /* Black background with opacity */
-  z-index: 2; /* Specify a stack order */
   cursor: pointer; /* Add a pointer on hover */
+}
+
+.hide {
+    display: none;
 }

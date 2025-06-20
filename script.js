@@ -1,9 +1,8 @@
 'use strict';
 
-let background = document.querySelector('.background'), playerElem = document.querySelector('.player'), pause = document.querySelector('.pause'), overlay = document.querySelector(".overlay");
-let border = 10;
-let paused = true;
+let background = document.querySelector('.background'), playerElem = document.querySelector('.player'), pause = document.querySelector('.pause'), resume = document.querySelector('.resume'), restart = document.querySelector('.restart'), overlay = document.querySelector(".overlay");
 
+let border = 10, paused = true, speed = 0.75, count = 0, game, lastTime, totalTime = 0;
 // the position of the origin (inital values as per the posiion of the wall and ground in the DOM)
 let origin = [border, background.clientHeight - playerElem.clientHeight - border];
 
@@ -19,35 +18,35 @@ const player = {
     
     vel: 0, // vertical velocity
     y: 0,
-    g: 700, // gravitational acceleration
+    g: 0.5, // gravitational acceleration
     
     jumping: false,
     jumpHoldTime: 0,
-    maxJumpHold: 0.01, // Max time (in seconds) holding jump gives more height
+    maxJumpHold: 0.03, // Max time (in seconds) holding jump gives more height
     freeFall: false, // when the player is mid-air and it's velocity can no longer be increased
 
     // the velocity is only increased if it's been increased less than two times since the player got off the ground, and the user hasn't let go of the spacebar (indicated by the date of this.freeFall)
     jumpStart() {
         if (!this.jumping) {
             this.jumping = true;
-            this.vel += 100; // initial jump impulse
+            this.vel += 2; // initial jump impulse
             this.jumpHoldTime = 0;
         }
     },
 
-    jumpHold(dt) {
+    jumpHold() {
         if (this.jumping && this.jumpHoldTime < this.maxJumpHold) {
-            this.vel += 200; // continue to increase velocity
-            this.jumpHoldTime += dt;
+            this.vel += 3; // continue to increase velocity
+            this.jumpHoldTime += 0.005;
         }
     },
     
     // updates the player's velocity and position
-    updateVelocityAndPosition(dt) {
-        this.jumpHold(dt); // apply jump boost if key is held
+    updateVelocityAndPosition() {
+        this.jumpHold(); // apply jump boost if key is held
 
-        this.vel = this.vel - this.g*0.01; // updates the velocity using gravity
-        this.y += this.vel * dt; // updates position using velocity
+        this.vel = this.vel - this.g; // updates the velocity using gravity
+        this.y += this.vel; // updates position using velocity
 
         // resets at ground level
         if (this.y <= 0) {
@@ -87,14 +86,30 @@ class Obstacle {
   }
 }
 
-let speed = 0.75; let count = 0;
 const obstacles = [];
 for (let i = 0; i < 3; i++) obstacles.push(new Obstacle(`${i + 1}`));
 obstacles.forEach(obstacle => obstacle.restart(count));
 
+// the velocity and postion, and the UI is updated in accordance, every 5 ms
+const gameLoop = function () {
+    let now = performance.now();
+    totalTime += (now - lastTime) / 1000; // seconds
+    lastTime = now;
+    player.updateVelocityAndPosition();
+    if (totalTime > 2) obstacles.forEach(obstacle => obstacle.move(speed, count));
+    if (count == 3) {
+        speed += 0.25
+        count = 0;
+    }
+}
+
 const jump = function (e) {
     if (e.key === " ") {
-        if (paused) paused = false;
+        if (paused) {
+            paused = false;
+            lastTime = performance.now();
+            game = window.setInterval(gameLoop, 5);
+        }
         player.jumpStart();
     }
 }
@@ -105,26 +120,18 @@ window.addEventListener('keydown', jump);
 // pause game 
 pause.addEventListener('click', function () {
     paused = true;
+    window.clearInterval(game);
     window.removeEventListener("keydown", jump);
-    overlay.style.display = "block";
+    overlay.classList.remove("hide");
+    resume.classList.remove("hide");
+    restart.classList.remove("hide");
 });
 
-// the velocity and postion, and the UI is updated in accordance, every 10 ms
-let lastTime = performance.now();
-let totalTime = 0;
-window.setInterval(function () {
-    let now = performance.now();
-    let dt = (now - lastTime) / 1000; // seconds
-    lastTime = now;
-    if (!paused) {
-        totalTime += dt;
-        player.updateVelocityAndPosition(dt);
-        if (totalTime > 2) {
-            obstacles.forEach(obstacle => obstacle.move(speed, count));
-        }
-        if (count == 3) {
-            speed += 0.25
-            count = 0;
-        }
-    }
-}, 5);
+resume.addEventListener('click', function () {
+    paused = false;
+    game = window.setInterval(gameLoop, 5);
+    window.addEventListener("keydown", jump);
+    overlay.classList.add("hide");
+    resume.classList.add("hide");
+    restart.classList.add("hide");
+});
