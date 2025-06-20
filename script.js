@@ -26,7 +26,6 @@ const player = {
     maxJumpHold: 0.01, // Max time (in seconds) holding jump gives more height
     freeFall: false, // when the player is mid-air and it's velocity can no longer be increased
 
-
     // the velocity is only increased if it's been increased less than two times since the player got off the ground, and the user hasn't let go of the spacebar (indicated by the date of this.freeFall)
     jumpStart() {
         if (!this.jumping) {
@@ -54,7 +53,6 @@ const player = {
         if (this.y <= 0) {
             this.y = 0;
             this.vel = 0;
-            this.count = 0;
             this.jumping = false; // this enables the player to jump again
         } 
 
@@ -68,8 +66,9 @@ class Obstacle {
     this.width = 50;
     this.id = document.getElementById(String(id));
   }
-  restart() {
+  restart(count) {
     let tries = 0;
+    count++;
     do {
         this.x = Math.random()*1000 + 1000;
         tries++;
@@ -80,16 +79,17 @@ class Obstacle {
     } while (obstacles.some( obstacle => this == obstacle || Math.abs(this.x - obstacle.x) < 300));
   }
 
-  move() {
-    this.x -= 1;
+  move(speed, count) {
+    this.x -= speed;
     this.id.style.left = xCoord(this.x);
-    if (this.x < -this.width - 10) this.restart();
+    if (this.x < -this.width - 10) this.restart(count);
   }
 }
 
+let speed = 0.75; let count = 0;
 const obstacles = [];
 for (let i = 0; i < 3; i++) obstacles.push(new Obstacle(`${i + 1}`));
-obstacles.forEach(obstacle => obstacle.restart());
+obstacles.forEach(obstacle => obstacle.restart(count));
 
 // player jumps when spacebar is pressed
 window.addEventListener('keydown', function (e) {
@@ -106,13 +106,15 @@ window.setInterval(function () {
     let now = performance.now();
     let dt = (now - lastTime) / 1000; // seconds
     lastTime = now;
-    if (paused) {
-        
-    } else {
+    if (!paused) {
         totalTime += dt;
         player.updateVelocityAndPosition(dt);
         if (totalTime > 2) {
-            obstacles.forEach(obstacle => obstacle.move());
+            obstacles.forEach(obstacle => obstacle.move(speed, count));
+        }
+        if (count == 3) {
+            speed += 0.25
+            count = 0;
         }
     }
 }, 5);
