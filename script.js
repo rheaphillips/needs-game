@@ -1,6 +1,6 @@
 'use strict';
 
-let background = document.querySelector('.background'), playerElem = document.querySelector('.player');
+let background = document.querySelector('.background'), playerElem = document.querySelector('.player'), pause = document.querySelector('.pause'), overlay = document.querySelector(".overlay");
 let border = 10;
 let paused = true;
 
@@ -66,6 +66,7 @@ class Obstacle {
     this.width = 50;
     this.id = document.getElementById(String(id));
   }
+
   restart(count) {
     let tries = 0;
     count++;
@@ -91,12 +92,21 @@ const obstacles = [];
 for (let i = 0; i < 3; i++) obstacles.push(new Obstacle(`${i + 1}`));
 obstacles.forEach(obstacle => obstacle.restart(count));
 
-// player jumps when spacebar is pressed
-window.addEventListener('keydown', function (e) {
+const jump = function (e) {
     if (e.key === " ") {
         if (paused) paused = false;
         player.jumpStart();
     }
+}
+
+// player jumps when spacebar is pressed
+window.addEventListener('keydown', jump);
+
+// pause game 
+pause.addEventListener('click', function () {
+    paused = true;
+    window.removeEventListener("keydown", jump);
+    overlay.style.display = "block";
 });
 
 // the velocity and postion, and the UI is updated in accordance, every 10 ms
