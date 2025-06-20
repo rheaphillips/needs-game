@@ -1,8 +1,8 @@
 'use strict';
 
-let background = document.querySelector('.background'), playerElem = document.querySelector('.player'), pauseBtn = document.querySelector('.pause'), resumeBtn = document.querySelector('.resume'), restartBtn = document.querySelector('.restart'), overlay = document.querySelector(".overlay");
+let background = document.querySelector('.background'), playerElem = document.querySelector('.player'), pauseBtn = document.querySelector('.pause'), resumeBtn = document.querySelector('.resume'), restartBtn = document.querySelector('.restart'), gameOverElem = document.querySelector('.gameOver'), overlay = document.querySelector(".overlay");
 
-let border = 10, speed = 0.75, count = 0, game, lastTime, totalTime = 0;
+let border = 10, speed = 0.75, score = 0, highscore = 0, game, lastTime, totalTime = 0;
 // the position of the origin (inital values as per the posiion of the wall and ground in the DOM)
 let origin = [border, background.clientHeight - playerElem.clientHeight - border];
 
@@ -63,6 +63,7 @@ class Obstacle {
   constructor(id) {
     this.x = 10;
     this.width = 50;
+    this.height = 50;
     this.id = document.getElementById(String(id));
   }
 
@@ -78,13 +79,17 @@ class Obstacle {
     } while (obstacles.some( obstacle => this == obstacle || Math.abs(this.x - obstacle.x) < 300));
   }
 
-  move(speed, count) {
+  move(speed, score) {
     this.x -= speed;
     this.id.style.left = xCoord(this.x);
     if (this.x < -this.width - 10) {
-        count++;
+        score++;
         this.respawn();
     }
+  }
+
+  collision() {
+    if (this.x > 100 && this.x < 180 && player.y < this.height) gameOver();
   }
 }
 
@@ -109,6 +114,7 @@ const resume = function () {
     overlay.classList.add("hide");
     resumeBtn.classList.add("hide");
     restartBtn.classList.add("hide");
+    gameOverElem.classList.add("hide");
 
     // start detecting key presses to trigger jumps when spacebar is pressed
     window.addEventListener('keydown', jump);
@@ -126,17 +132,29 @@ const restart = function () {
     resume();
 }
 
+const gameOver = function() {
+
+    if (highscore < score) highscore = score;
+    score = 0;
+
+    window.clearInterval(game);
+    window.removeEventListener("keydown", jump);
+    overlay.classList.remove("hide");
+    restartBtn.classList.remove("hide");
+    gameOverElem.classList.remove("hide");
+}
+
 // the velocity and postion, and the UI is updated in accordance, every 5 ms
 const gameLoop = function () {
     let now = performance.now();
     totalTime += (now - lastTime) / 1000; // seconds
     lastTime = now;
     player.updateVelocityAndPosition();
-    if (totalTime > 2) obstacles.forEach(obstacle => obstacle.move(speed, count));
-    if (count == 3) {
-        speed += 0.25
-        count = 0;
-    }
+    if (totalTime > 2) obstacles.forEach(obstacle => {
+        obstacle.move(speed, score);
+        obstacle.collision();
+    });
+    if (score%3 == 0 && score != 0) speed += 0.25
 }
 
 pauseBtn.addEventListener('click', pause);
