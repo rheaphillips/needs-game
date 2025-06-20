@@ -1,8 +1,8 @@
 'use strict';
 
-let background = document.querySelector('.background'), playerElem = document.querySelector('.player'), pause = document.querySelector('.pause'), resume = document.querySelector('.resume'), restart = document.querySelector('.restart'), overlay = document.querySelector(".overlay");
+let background = document.querySelector('.background'), playerElem = document.querySelector('.player'), pauseBtn = document.querySelector('.pause'), resumeBtn = document.querySelector('.resume'), restartBtn = document.querySelector('.restart'), overlay = document.querySelector(".overlay");
 
-let border = 10, paused = true, speed = 0.75, count = 0, game, lastTime, totalTime = 0;
+let border = 10, speed = 0.75, count = 0, game, lastTime, totalTime = 0;
 // the position of the origin (inital values as per the posiion of the wall and ground in the DOM)
 let origin = [border, background.clientHeight - playerElem.clientHeight - border];
 
@@ -16,21 +16,18 @@ const yCoord = function (y) {
 
 const player = {
     
+    g: 0.5, // gravitational acceleration
+    maxJumpHold: 0.03, // Max time (in seconds) holding jump gives more height
     vel: 0, // vertical velocity
     y: 0,
-    g: 0.5, // gravitational acceleration
-    
     jumping: false,
     jumpHoldTime: 0,
-    maxJumpHold: 0.03, // Max time (in seconds) holding jump gives more height
-    freeFall: false, // when the player is mid-air and it's velocity can no longer be increased
 
-    // the velocity is only increased if it's been increased less than two times since the player got off the ground, and the user hasn't let go of the spacebar (indicated by the date of this.freeFall)
+    // provides the initial jump impulse
     jumpStart() {
         if (!this.jumping) {
             this.jumping = true;
-            this.vel += 2; // initial jump impulse
-            this.jumpHoldTime = 0;
+            this.vel += 2;
         }
     },
 
@@ -49,12 +46,15 @@ const player = {
         this.y += this.vel; // updates position using velocity
 
         // resets at ground level
-        if (this.y <= 0) {
-            this.y = 0;
-            this.vel = 0;
-            this.jumping = false; // this enables the player to jump again
-        } 
+        if (this.y <= 0) this.reset(); 
+        else playerElem.style.top = yCoord(this.y);
+    },
 
+    reset() {
+        this.y = 0;
+        this.vel = 0;
+        this.jumping = false; // this enables the player to jump again
+        this.jumpHoldTime = 0;
         playerElem.style.top = yCoord(this.y);
     }
 }
@@ -66,9 +66,8 @@ class Obstacle {
     this.id = document.getElementById(String(id));
   }
 
-  restart(count) {
+  respawn() {
     let tries = 0;
-    count++;
     do {
         this.x = Math.random()*1000 + 1000;
         tries++;
@@ -82,13 +81,50 @@ class Obstacle {
   move(speed, count) {
     this.x -= speed;
     this.id.style.left = xCoord(this.x);
-    if (this.x < -this.width - 10) this.restart(count);
+    if (this.x < -this.width - 10) {
+        count++;
+        this.respawn();
+    }
   }
 }
 
 const obstacles = [];
 for (let i = 0; i < 3; i++) obstacles.push(new Obstacle(`${i + 1}`));
-obstacles.forEach(obstacle => obstacle.restart(count));
+
+// player jumps when spacebar is pressed
+const jump = (e) => {if (e.key === " ") player.jumpStart()};
+
+// pause game
+const pause = function () {
+    window.clearInterval(game);
+    window.removeEventListener("keydown", jump);
+    overlay.classList.remove("hide");
+    resumeBtn.classList.remove("hide");
+    restartBtn.classList.remove("hide");
+}
+
+// resume paused game
+const resume = function () {
+    // hide overlay and pause menu buttons
+    overlay.classList.add("hide");
+    resumeBtn.classList.add("hide");
+    restartBtn.classList.add("hide");
+
+    // start detecting key presses to trigger jumps when spacebar is pressed
+    window.addEventListener('keydown', jump);
+
+    // start game loop
+    lastTime = performance.now();
+    game = window.setInterval(gameLoop, 5);
+}
+
+const restart = function () {
+    // Reset obstacles and player
+    obstacles.forEach(obstacle => obstacle.respawn());
+    player.reset();
+    // exit pause menu and add event listners
+    resume();
+}
 
 // the velocity and postion, and the UI is updated in accordance, every 5 ms
 const gameLoop = function () {
@@ -103,35 +139,8 @@ const gameLoop = function () {
     }
 }
 
-const jump = function (e) {
-    if (e.key === " ") {
-        if (paused) {
-            paused = false;
-            lastTime = performance.now();
-            game = window.setInterval(gameLoop, 5);
-        }
-        player.jumpStart();
-    }
-}
+pauseBtn.addEventListener('click', pause);
+resumeBtn.addEventListener('click', resume);
+restartBtn.addEventListener('click', restart);
 
-// player jumps when spacebar is pressed
-window.addEventListener('keydown', jump);
-
-// pause game 
-pause.addEventListener('click', function () {
-    paused = true;
-    window.clearInterval(game);
-    window.removeEventListener("keydown", jump);
-    overlay.classList.remove("hide");
-    resume.classList.remove("hide");
-    restart.classList.remove("hide");
-});
-
-resume.addEventListener('click', function () {
-    paused = false;
-    game = window.setInterval(gameLoop, 5);
-    window.addEventListener("keydown", jump);
-    overlay.classList.add("hide");
-    resume.classList.add("hide");
-    restart.classList.add("hide");
-});
+restart();
